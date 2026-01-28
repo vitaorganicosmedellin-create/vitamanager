@@ -1,0 +1,1381 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VitaManager v16.0 | Pro Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- Google Sheets API -->
+    <script src="https://apis.google.com/js/api.js"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        vita: { 950: '#052e16', 900: '#14532d', 800: '#166534', 600: '#16a34a', 500: '#22c55e', 50: '#f0fdf4' },
+                        paper: '#ffffff'
+                    },
+                    boxShadow: {
+                        'soft': '0 4px 20px -2px rgba(0, 0, 0, 0.05)',
+                        'glow': '0 0 15px rgba(34, 197, 94, 0.3)'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f1f5f9;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* Navigation Animations */
+        .nav-item {
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .nav-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 3px;
+            background: #4ade80;
+            transform: scaleY(0);
+            transition: transform 0.2s;
+        }
+
+        .nav-item.active {
+            background: rgba(255, 255, 255, 0.08);
+            color: white;
+        }
+
+        .nav-item.active::before {
+            transform: scaleY(1);
+        }
+
+        .nav-item:hover:not(.active) {
+            background: rgba(255, 255, 255, 0.03);
+            transform: translateX(4px);
+        }
+
+        /* KPI Cards */
+        .kpi-card {
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Inputs */
+        .input-modern {
+            width: 100%;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 0.6rem 0.8rem;
+            border-radius: 0.5rem;
+            outline: none;
+            transition: all 0.2s;
+            font-weight: 500;
+            color: #334155;
+        }
+
+        .input-modern:focus {
+            background: white;
+            border-color: #16a34a;
+            box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.1);
+        }
+
+        /* Filters */
+        .filter-pill {
+            padding: 0.4rem 1rem;
+            border-radius: 99px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+        }
+
+        .filter-pill.active {
+            background: #16a34a;
+            color: white;
+            box-shadow: 0 2px 10px rgba(22, 163, 74, 0.3);
+        }
+
+        .filter-pill.inactive {
+            background: white;
+            color: #64748b;
+            border-color: #e2e8f0;
+        }
+
+        .filter-pill.inactive:hover {
+            border-color: #16a34a;
+            color: #16a34a;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.4s ease-out forwards;
+            opacity: 0;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+
+<body class="flex h-screen overflow-hidden text-slate-700">
+
+    <aside
+        class="w-72 bg-gradient-to-b from-vita-950 to-vita-900 text-white flex flex-col z-30 h-full hidden md:flex shadow-2xl">
+        <div class="p-8 border-b border-white/10">
+            <div class="flex items-center gap-3">
+                <div
+                    class="w-10 h-10 bg-gradient-to-br from-green-400 to-emerald-600 rounded-lg flex items-center justify-center shadow-glow">
+                    <i class="fas fa-leaf text-white text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight leading-none">VITA<span
+                            class="text-green-400">ORGÁNICOS</span></h1>
+                    <p class="text-[10px] text-green-200/70 uppercase tracking-widest mt-1">Management v16.0</p>
+                </div>
+            </div>
+        </div>
+
+        <nav class="flex-1 overflow-y-auto py-6 px-4 space-y-8">
+            <div>
+                <p class="px-4 text-[10px] font-bold text-slate-400 uppercase mb-3 tracking-widest">Operaciones</p>
+                <div class="space-y-1">
+                    <button onclick="nav('nomina-add')" id="nav-nomina-add"
+                        class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm text-slate-300">
+                        <i class="fas fa-stopwatch w-5 text-center text-emerald-400"></i> Registro Jornadas
+                    </button>
+                    <button onclick="nav('caja-dash')" id="nav-caja-dash"
+                        class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm text-slate-300">
+                        <i class="fas fa-cash-register w-5 text-center text-emerald-400"></i> Control Caja
+                    </button>
+                </div>
+            </div>
+
+            <div>
+                <p class="px-4 text-[10px] font-bold text-slate-400 uppercase mb-3 tracking-widest">Inteligencia</p>
+                <div class="space-y-1">
+                    <button onclick="nav('nomina-dash')" id="nav-nomina-dash"
+                        class="nav-item active w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm text-slate-300">
+                        <i class="fas fa-chart-pie w-5 text-center text-blue-400"></i> Analytics Nómina
+                    </button>
+                    <button onclick="nav('caja-stats')" id="nav-caja-stats"
+                        class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm text-slate-300">
+                        <i class="fas fa-chart-line w-5 text-center text-blue-400"></i> Finanzas
+                    </button>
+                </div>
+            </div>
+
+            <div>
+                <p class="px-4 text-[10px] font-bold text-slate-400 uppercase mb-3 tracking-widest">Base de Datos</p>
+                <div class="space-y-1">
+                    <button onclick="nav('nomina-list')" id="nav-nomina-list"
+                        class="nav-item w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-slate-400 hover:text-white">
+                        <i class="fas fa-database w-5 text-center"></i> Historial Nómina
+                    </button>
+                    <button onclick="nav('caja-stats')" onclick="nav('caja-dash')"
+                        class="nav-item w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-slate-400 hover:text-white">
+                        <i class="fas fa-receipt w-5 text-center"></i> Historial Caja
+                    </button>
+                </div>
+            </div>
+        </nav>
+
+        <div class="p-4 border-t border-white/10 bg-black/20 backdrop-blur-sm">
+            <button onclick="nav('config')" id="nav-config"
+                class="flex items-center gap-3 px-2 py-2 w-full hover:bg-white/5 rounded transition text-sm text-slate-300">
+                <div class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center"><i
+                        class="fas fa-cog text-xs"></i></div>
+                <div class="text-left">
+                    <p class="font-bold text-white text-xs">Configuración</p>
+                    <p class="text-[10px]">Empleados & Backup</p>
+                </div>
+            </button>
+        </div>
+    </aside>
+
+    <main class="flex-1 overflow-y-auto bg-slate-100 relative">
+        <header
+            class="bg-white/80 backdrop-blur-md sticky top-0 z-40 px-8 py-4 border-b border-slate-200 flex justify-between items-center transition-all">
+            <div>
+                <h2 class="text-xl font-bold text-slate-800" id="header-title">Dashboard Analítico</h2>
+                <div class="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
+                    <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                    <span id="header-subtitle">Vista general</span>
+                </div>
+            </div>
+            <div class="hidden sm:flex items-center gap-6">
+                <div class="text-right">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Caja Disponible</p>
+                    <p class="text-xl font-extrabold text-emerald-600" id="header-saldo">$0</p>
+                </div>
+                <div class="h-8 w-px bg-slate-200"></div>
+                <button onclick="document.querySelector('.hidden-input-backup').click()"
+                    class="w-8 h-8 rounded-full bg-slate-50 border border-slate-200 hover:bg-slate-100 flex items-center justify-center text-slate-500 transition shadow-sm"
+                    title="Restaurar Backup">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                </button>
+                <input type="file" onchange="restaurarBackup(this)" class="hidden hidden-input-backup">
+                <button onclick="descargarBackup()"
+                    class="w-8 h-8 rounded-full bg-slate-50 border border-slate-200 hover:bg-slate-100 flex items-center justify-center text-slate-500 transition shadow-sm"
+                    title="Descargar Backup">
+                    <i class="fas fa-cloud-download-alt"></i>
+                </button>
+            </div>
+        </header>
+
+        <div class="p-6 max-w-7xl mx-auto pb-32">
+
+            <div id="view-nomina-dash" class="fade-in space-y-8">
+
+                <div class="bg-white p-2 rounded-2xl shadow-soft flex flex-wrap gap-2 items-center justify-between">
+                    <div class="flex gap-2 p-1">
+                        <button onclick="setMode('WEEK')" id="btn-week" class="filter-pill active"><i
+                                class="fas fa-calendar-week mr-1"></i> Semana</button>
+                        <button onclick="setMode('MONTH')" id="btn-month" class="filter-pill inactive">Mes</button>
+                        <button onclick="setMode('YEAR')" id="btn-year" class="filter-pill inactive">Año 2026</button>
+                    </div>
+                    <div class="pr-2">
+                        <select id="dash-month-select" onchange="if(DASH_MODE==='MONTH') renderDashNomina()"
+                            class="bg-slate-50 border-none text-sm font-bold text-slate-600 outline-none rounded-lg p-2 cursor-pointer hover:bg-slate-100 transition">
+                            <option value="01">Enero</option>
+                            <option value="02">Febrero</option>
+                            <option value="03">Marzo</option>
+                            <option value="04">Abril</option>
+                            <option value="05">Mayo</option>
+                            <option value="06">Junio</option>
+                            <option value="07">Julio</option>
+                            <option value="08">Agosto</option>
+                            <option value="09">Septiembre</option>
+                            <option value="10">Octubre</option>
+                            <option value="11">Noviembre</option>
+                            <option value="12">Diciembre</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div
+                        class="bg-white p-6 rounded-2xl shadow-soft kpi-card border border-slate-100 relative overflow-hidden group">
+                        <div class="absolute right-0 top-0 p-4 opacity-5 group-hover:opacity-10 transition"><i
+                                class="fas fa-money-bill-wave text-6xl text-emerald-600"></i></div>
+                        <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Costo Total Nómina</p>
+                        <h3 class="text-3xl font-extrabold text-slate-800" id="kpi-money">$0</h3>
+                        <p class="text-xs text-emerald-500 font-bold mt-2 flex items-center gap-1"><i
+                                class="fas fa-coins"></i> Pagado</p>
+                    </div>
+
+                    <div
+                        class="bg-white p-6 rounded-2xl shadow-soft kpi-card border border-slate-100 relative overflow-hidden group">
+                        <div class="absolute right-0 top-0 p-4 opacity-5 group-hover:opacity-10 transition"><i
+                                class="fas fa-clock text-6xl text-blue-600"></i></div>
+                        <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Horas Extras</p>
+                        <h3 class="text-3xl font-extrabold text-slate-800" id="kpi-hours">0h</h3>
+                        <p class="text-xs text-blue-500 font-bold mt-2 flex items-center gap-1"><i
+                                class="fas fa-chart-bar"></i> Calculadas auto</p>
+                    </div>
+
+                    <div
+                        class="bg-white p-6 rounded-2xl shadow-soft kpi-card border border-slate-100 relative overflow-hidden group">
+                        <div class="absolute right-0 top-0 p-4 opacity-5 group-hover:opacity-10 transition"><i
+                                class="fas fa-users text-6xl text-orange-600"></i></div>
+                        <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Turnos Procesados</p>
+                        <h3 class="text-3xl font-extrabold text-slate-800" id="kpi-count">0</h3>
+                        <p class="text-xs text-orange-500 font-bold mt-2 flex items-center gap-1"><i
+                                class="fas fa-check-circle"></i> Registros</p>
+                    </div>
+
+                    <div
+                        class="bg-white p-6 rounded-2xl shadow-soft kpi-card border border-slate-100 relative overflow-hidden group">
+                        <div class="absolute right-0 top-0 p-4 opacity-5 group-hover:opacity-10 transition"><i
+                                class="fas fa-calculator text-6xl text-purple-600"></i></div>
+                        <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Promedio Diario</p>
+                        <h3 class="text-2xl font-extrabold text-slate-800 mt-1" id="kpi-avg">$0</h3>
+                        <p class="text-xs text-purple-500 font-bold mt-2 flex items-center gap-1"><i
+                                class="fas fa-info-circle"></i> Por trabajador</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="bg-white p-6 rounded-2xl shadow-soft border border-slate-100 lg:col-span-2">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                                <div
+                                    class="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600">
+                                    <i class="fas fa-chart-area"></i>
+                                </div> Tendencia de Costos
+                            </h3>
+                        </div>
+                        <div class="h-80"><canvas id="mainChart"></canvas></div>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl shadow-soft border border-slate-100">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                                <div
+                                    class="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600">
+                                    <i class="fas fa-chart-pie"></i>
+                                </div> Distribución
+                            </h3>
+                        </div>
+                        <div class="h-64 flex justify-center relative">
+                            <canvas id="pieChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-soft border border-slate-100 overflow-hidden">
+                    <div class="p-5 border-b border-slate-100 flex justify-between items-center">
+                        <h3 class="font-bold text-slate-800">Detalle por Empleado</h3>
+                        <span class="text-xs bg-slate-100 text-slate-500 px-2 py-1 rounded">Periodo Seleccionado</span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left">
+                            <thead class="bg-slate-50 text-xs uppercase text-slate-500 font-semibold">
+                                <tr>
+                                    <th class="p-4 pl-6">Empleado</th>
+                                    <th class="p-4 text-center">Turnos</th>
+                                    <th class="p-4 text-right">Horas Extras</th>
+                                    <th class="p-4 text-right pr-6">Total a Pagar</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tb-ranking" class="divide-y divide-slate-100 text-slate-600"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-nomina-add" class="hidden fade-in relative">
+                <div
+                    class="bg-white/90 backdrop-blur-md p-4 rounded-2xl shadow-soft border border-slate-200 mb-8 flex flex-wrap items-center justify-between gap-4 sticky top-4 z-30">
+                    <div class="flex items-center gap-4">
+                        <!-- Google Sheets Status -->
+                        <div id="google-status" class="hidden items-center gap-2 bg-green-50 px-3 py-1.5 rounded-full">
+                            <i class="fab fa-google text-green-600"></i>
+                            <span class="text-xs text-green-700 font-medium">Conectado a Google Sheets</span>
+                        </div>
+                        <button id="google-login-btn" onclick="handleGoogleLogin()"
+                            class="hidden items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition">
+                            <i class="fab fa-google"></i>
+                            <span class="text-sm">Conectar Google Sheets</span>
+                        </button>
+                        <div
+                            class="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
+                            <i class="fas fa-calendar-alt"></i>
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-bold text-slate-400 uppercase">Fecha de Jornada</p>
+                            <input type="date" id="batch-date"
+                                class="bg-transparent font-bold text-slate-800 outline-none cursor-pointer">
+                        </div>
+                    </div>
+                    <div class="hidden md:block text-xs text-slate-500 bg-slate-100 px-3 py-1 rounded-full"><i
+                            class="fas fa-info-circle mr-1"></i>Ingresa horas y guarda todo con un solo clic.</div>
+                </div>
+
+                <form onsubmit="guardarJornadaMasiva(event)">
+                    <div id="batch-container"
+                        class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-24"></div>
+
+                    <div class="flex justify-center mt-12 mb-20">
+                        <button type="submit"
+                            class="group bg-vita-600 hover:bg-vita-800 text-white font-bold h-20 px-12 rounded-full shadow-glow transition-all transform hover:scale-105 hover:-translate-y-1 flex items-center gap-4">
+                            <span class="text-xl">GUARDAR PLANILLA</span>
+                            <div
+                                class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center group-hover:rotate-12 transition">
+                                <i class="fas fa-save text-lg"></i>
+                            </div>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <div id="view-caja-dash" class="hidden fade-in space-y-8">
+                <div
+                    class="bg-gradient-to-r from-vita-900 to-emerald-900 text-white p-8 rounded-3xl shadow-xl relative overflow-hidden">
+                    <div
+                        class="absolute -right-10 -top-10 w-64 h-64 bg-green-500 rounded-full mix-blend-overlay filter blur-3xl opacity-20 animate-pulse">
+                    </div>
+                    <div class="relative z-10 flex flex-col md:flex-row justify-between items-center gap-6">
+                        <div>
+                            <div class="flex items-center gap-2 mb-2">
+                                <span
+                                    class="bg-white/20 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">Efectivo
+                                    Real</span>
+                                <i class="fas fa-check-circle text-green-400 text-xs"></i>
+                            </div>
+                            <h2 class="text-6xl font-extrabold tracking-tight" id="caja-saldo-big">$0</h2>
+                        </div>
+                        <div
+                            class="bg-white/10 p-4 rounded-xl backdrop-blur-sm border border-white/10 text-right min-w-[200px]">
+                            <label class="text-[10px] text-green-100 block uppercase font-bold mb-1">Base Fija en
+                                Caja</label>
+                            <div class="flex items-center justify-end gap-2">
+                                <span class="text-green-300">$</span>
+                                <input type="number" id="caja-base"
+                                    class="bg-transparent text-white font-bold text-2xl text-right w-full outline-none border-b border-green-400/50 focus:border-green-400 placeholder-white/30"
+                                    onchange="updateBase(this.value)">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="bg-white p-8 rounded-3xl shadow-soft border border-slate-100">
+                        <div class="flex items-center gap-3 mb-6">
+                            <div
+                                class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600 text-lg">
+                                <i class="fas fa-arrow-down"></i>
+                            </div>
+                            <h3 class="font-bold text-xl text-slate-800">Registrar Entrada</h3>
+                        </div>
+                        <form onsubmit="guardarMov(event, 'INGRESO')" class="space-y-5">
+                            <div class="space-y-1">
+                                <label class="text-xs font-bold text-slate-400 ml-1">Concepto</label>
+                                <select name="cat" class="input-modern bg-slate-50" required>
+                                    <option value="Ventas Producto">💰 Ventas Producto</option>
+                                    <option value="Base Inicial">📥 Base Inicial</option>
+                                    <option value="Aporte Capital">🏦 Aporte Capital</option>
+                                    <option value="Otros">🔹 Otros</option>
+                                </select>
+                            </div>
+                            <div class="grid grid-cols-3 gap-4">
+                                <div class="col-span-2 space-y-1">
+                                    <label class="text-xs font-bold text-slate-400 ml-1">Detalle</label>
+                                    <input name="con" placeholder="Opcional" class="input-modern">
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="text-xs font-bold text-slate-400 ml-1">Monto</label>
+                                    <input name="mon" type="number" placeholder="$0"
+                                        class="input-modern font-bold text-green-700 text-right" required>
+                                </div>
+                            </div>
+                            <button
+                                class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-green-200 transition-all active:scale-95">
+                                REGISTRAR INGRESO
+                            </button>
+                        </form>
+                    </div>
+
+                    <div class="bg-white p-8 rounded-3xl shadow-soft border border-slate-100">
+                        <div class="flex items-center gap-3 mb-6">
+                            <div
+                                class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-red-600 text-lg">
+                                <i class="fas fa-arrow-up"></i>
+                            </div>
+                            <h3 class="font-bold text-xl text-slate-800">Registrar Salida</h3>
+                        </div>
+                        <form onsubmit="guardarMov(event, 'GASTO')" class="space-y-5">
+                            <div class="space-y-1">
+                                <label class="text-xs font-bold text-slate-400 ml-1">Categoría</label>
+                                <select name="cat" class="input-modern bg-slate-50" required>
+                                    <option value="" disabled selected>Seleccionar...</option>
+                                    <option value="Insumos">🥦 Insumos / Materia Prima</option>
+                                    <option value="Nomina">👷‍♂️ Pago Nómina</option>
+                                    <option value="Transporte">🚚 Transporte / Domicilios</option>
+                                    <option value="Servicios">💡 Servicios Públicos</option>
+                                    <option value="Mantenimiento">🔧 Mantenimiento</option>
+                                    <option value="Alimentacion">🍔 Alimentación</option>
+                                    <option value="Varios">🔸 Varios</option>
+                                </select>
+                            </div>
+                            <div class="grid grid-cols-3 gap-4">
+                                <div class="col-span-2 space-y-1">
+                                    <label class="text-xs font-bold text-slate-400 ml-1">Detalle</label>
+                                    <input name="con" placeholder="Descripción" class="input-modern" required>
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="text-xs font-bold text-slate-400 ml-1">Monto</label>
+                                    <input name="mon" type="number" placeholder="$0"
+                                        class="input-modern font-bold text-red-600 text-right" required>
+                                </div>
+                            </div>
+                            <button
+                                class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-red-200 transition-all active:scale-95">
+                                REGISTRAR GASTO
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-soft border border-slate-100 overflow-hidden">
+                    <div
+                        class="p-4 bg-slate-50/50 border-b border-slate-100 font-bold text-slate-600 text-sm flex justify-between">
+                        <span>Últimos Movimientos</span>
+                        <button onclick="nav('caja-stats')" class="text-emerald-600 text-xs hover:underline">Ver
+                            Historial Completo →</button>
+                    </div>
+                    <table class="w-full text-sm text-left">
+                        <tbody id="tb-caja" class="divide-y divide-slate-50"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="view-caja-stats" class="hidden fade-in space-y-8">
+                <div class="bg-white p-6 rounded-2xl shadow-soft border border-slate-100">
+                    <h3 class="font-bold text-slate-800 mb-6 flex gap-2 items-center">
+                        <div class="w-8 h-8 rounded bg-orange-100 text-orange-600 flex items-center justify-center"><i
+                                class="fas fa-balance-scale"></i></div> Flujo de Caja (Ingresos vs Gastos)
+                    </h3>
+                    <div class="h-72"><canvas id="cashFlowChart"></canvas></div>
+                </div>
+                <div class="bg-white rounded-2xl shadow-soft border border-slate-100 overflow-hidden">
+                    <div class="p-5 border-b border-slate-100 font-bold text-slate-800">Gastos por Categoría (Total
+                        Histórico)</div>
+                    <table class="w-full text-sm text-left">
+                        <tbody id="tb-caja-cats" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+                <div class="bg-white rounded-2xl shadow-soft p-6">
+                    <div class="flex justify-between mb-4">
+                        <h3 class="font-bold text-slate-700">Historial Detallado</h3><button
+                            onclick="exportExcel('caja')"
+                            class="text-xs bg-slate-800 hover:bg-black text-white px-3 py-2 rounded transition">Excel</button>
+                    </div>
+                    <div class="overflow-auto max-h-96">
+                        <table class="w-full text-sm text-left">
+                            <thead class="bg-slate-50 uppercase text-xs text-slate-500">
+                                <tr>
+                                    <th class="p-3">Fecha</th>
+                                    <th>Cat</th>
+                                    <th>Detalle</th>
+                                    <th class="text-right p-3">Monto</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="tb-caja-full"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-nomina-list"
+                class="hidden fade-in bg-white rounded-2xl shadow-soft p-6 border border-slate-100">
+                <div class="flex justify-between mb-6 items-center">
+                    <div>
+                        <h3 class="font-bold text-lg text-slate-800">Base de Datos Nómina</h3>
+                        <p class="text-xs text-slate-400">Todos los registros históricos</p>
+                    </div>
+                    <button onclick="exportExcel('nomina')"
+                        class="text-sm bg-vita-900 hover:bg-vita-800 text-white px-4 py-2 rounded-lg transition shadow-md flex items-center gap-2"><i
+                            class="fas fa-file-excel"></i> Exportar</button>
+                </div>
+                <div class="overflow-auto max-h-[600px] border rounded-lg border-slate-100">
+                    <table class="w-full text-sm text-left">
+                        <thead class="bg-slate-50 uppercase text-xs text-slate-500 sticky top-0 z-10">
+                            <tr>
+                                <th class="p-3 pl-4">Fecha</th>
+                                <th>Empleado</th>
+                                <th class="text-center">HE</th>
+                                <th class="text-right">Total</th>
+                                <th class="pr-4"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="tb-nomina" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="view-config" class="hidden fade-in">
+                <div class="max-w-xl mx-auto bg-white p-8 rounded-2xl border border-slate-200 shadow-lg">
+                    <div class="text-center mb-8">
+                        <div
+                            class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-600 text-2xl">
+                            <i class="fas fa-user-cog"></i>
+                        </div>
+                        <h3 class="font-bold text-xl text-slate-800">Gestión de Talento</h3>
+                        <p class="text-sm text-slate-500">Agrega o elimina empleados activos</p>
+                    </div>
+
+                    <div class="flex gap-2 mb-6">
+                        <input id="new-emp" placeholder="Nombre completo del empleado" class="input-modern">
+                        <button onclick="addEmp()"
+                            class="bg-slate-800 text-white px-6 rounded-lg font-bold hover:bg-black transition">Agregar</button>
+                    </div>
+                    <div id="emp-list" class="space-y-2"></div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        // ================= MOTOR v16.0 (CORE) =================
+        const CONFIG = { SALARIO: 1750905, HORAS: 240 };
+        const VALOR_HORA = CONFIG.SALARIO / CONFIG.HORAS;
+        let DASH_MODE = 'WEEK';
+
+        let db = {
+            emps: JSON.parse(localStorage.getItem('v16_emps')) || [{ id: 'e1', name: 'Juan Pérez' }, { id: 'e2', name: 'Maria Rodriguez' }, { id: 'e3', name: 'Pedro Sola' }, { id: 'e4', name: 'Ana Gomez' }],
+            nomina: JSON.parse(localStorage.getItem('v16_nomina')) || [],
+            caja: JSON.parse(localStorage.getItem('v16_caja')) || [],
+            cajaBase: parseFloat(localStorage.getItem('v16_caja_base')) || 0
+        };
+
+        // UI Helpers
+        const formatMoney = (n) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n);
+        Chart.defaults.font.family = 'Inter';
+        Chart.defaults.color = '#64748b';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('batch-date').valueAsDate = new Date();
+            document.getElementById('dash-month-select').value = String(new Date().getMonth() + 1).padStart(2, '0');
+            initGoogleAPI(); // Initialize Google Sheets API
+            nav('nomina-dash');
+        });
+
+        // ================= GOOGLE SHEETS INTEGRATION =================
+        const GOOGLE_CONFIG = {
+            CLIENT_ID: 'YOUR_CLIENT_ID_HERE.apps.googleusercontent.com', // Usuario debe reemplazar
+            API_KEY: 'YOUR_API_KEY_HERE', // Usuario debe reemplazar
+            DISCOVERY_DOCS: ['https://sheets.googleapis.com/$discovery/rest?version=v4'],
+            SCOPES: 'https://www.googleapis.com/auth/spreadsheets'
+        };
+
+        let SPREADSHEET_ID = localStorage.getItem('vita_spreadsheet_id') || null;
+        let isGoogleAuthorized = false;
+        let gapiInited = false;
+        let gisInited = false;
+        let tokenClient;
+
+        // Inicializar Google API
+        function initGoogleAPI() {
+            gapi.load('client', initializeGapiClient);
+            gisLoaded();
+        }
+
+        async function initializeGapiClient() {
+            await gapi.client.init({
+                apiKey: GOOGLE_CONFIG.API_KEY,
+                discoveryDocs: GOOGLE_CONFIG.DISCOVERY_DOCS,
+            });
+            gapiInited = true;
+            maybeEnableButtons();
+        }
+
+        function gisLoaded() {
+            tokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: GOOGLE_CONFIG.CLIENT_ID,
+                scope: GOOGLE_CONFIG.SCOPES,
+                callback: '', // Se define en handleGoogleLogin
+            });
+            gisInited = true;
+            maybeEnableButtons();
+        }
+
+        function maybeEnableButtons() {
+            if (gapiInited && gisInited) {
+                document.getElementById('google-login-btn').classList.remove('hidden');
+                document.getElementById('google-login-btn').classList.add('flex');
+            }
+        }
+
+        // Manejar login de Google
+        function handleGoogleLogin() {
+            tokenClient.callback = async (resp) => {
+                if (resp.error !== undefined) {
+                    throw (resp);
+                }
+                isGoogleAuthorized = true;
+                document.getElementById('google-login-btn').classList.add('hidden');
+                document.getElementById('google-status').classList.remove('hidden');
+                document.getElementById('google-status').classList.add('flex');
+
+                // Si no hay spreadsheet, crear uno
+                if (!SPREADSHEET_ID) {
+                    await createSpreadsheet();
+                }
+
+                // Cargar datos desde Sheets
+                await loadFromSheets();
+
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Conectado',
+                    text: 'Google Sheets conectado exitosamente',
+                    timer: 2000
+                });
+            };
+
+            if (gapi.client.getToken() === null) {
+                tokenClient.requestAccessToken({ prompt: 'consent' });
+            } else {
+                tokenClient.requestAccessToken({ prompt: '' });
+            }
+        }
+
+        // Crear nuevo Google Sheet
+        async function createSpreadsheet() {
+            try {
+                const response = await gapi.client.sheets.spreadsheets.create({
+                    properties: { title: 'VitaManager - Base de Datos' },
+                    sheets: [
+                        { properties: { title: 'Empleados', gridProperties: { frozenRowCount: 1 } } },
+                        { properties: { title: 'Nómina', gridProperties: { frozenRowCount: 1 } } },
+                        { properties: { title: 'Caja', gridProperties: { frozenRowCount: 1 } } },
+                        { properties: { title: 'Config', gridProperties: { frozenRowCount: 1 } } }
+                    ]
+                });
+                SPREADSHEET_ID = response.result.spreadsheetId;
+                localStorage.setItem('vita_spreadsheet_id', SPREADSHEET_ID);
+
+                // Inicializar headers
+                await initializeSheetHeaders();
+
+                console.log('Spreadsheet creado:', SPREADSHEET_ID);
+                return SPREADSHEET_ID;
+            } catch (err) {
+                console.error('Error creando spreadsheet:', err);
+                Swal.fire('Error', 'No se pudo crear el Google Sheet', 'error');
+            }
+        }
+
+        // Inicializar headers de las hojas
+        async function initializeSheetHeaders() {
+            const requests = [
+                {
+                    range: 'Empleados!A1:C1',
+                    values: [['ID', 'Nombre', 'Fecha Creación']]
+                },
+                {
+                    range: 'Nómina!A1:H1',
+                    values: [['ID', 'Fecha', 'Empleado', 'Entrada', 'Salida', 'HE', 'Bonificación', 'Total']]
+                },
+                {
+                    range: 'Caja!A1:F1',
+                    values: [['ID', 'Fecha', 'Tipo', 'Categoría', 'Detalle', 'Monto']]
+                },
+                {
+                    range: 'Config!A1:B1',
+                    values: [['Clave', 'Valor']]
+                }
+            ];
+
+            for (const req of requests) {
+                await gapi.client.sheets.spreadsheets.values.update({
+                    spreadsheetId: SPREADSHEET_ID,
+                    range: req.range,
+                    valueInputOption: 'RAW',
+                    resource: { values: req.values }
+                });
+            }
+        }
+
+        // Guardar empleados en Sheets
+        async function saveEmpleadosToSheets() {
+            if (!isGoogleAuthorized || !SPREADSHEET_ID) return;
+
+            const values = [['ID', 'Nombre', 'Fecha Creación']];
+            db.emps.forEach(emp => {
+                values.push([emp.id, emp.name, new Date().toISOString().slice(0, 10)]);
+            });
+
+            await gapi.client.sheets.spreadsheets.values.update({
+                spreadsheetId: SPREADSHEET_ID,
+                range: 'Empleados!A1',
+                valueInputOption: 'RAW',
+                resource: { values }
+            });
+        }
+
+        // Cargar empleados desde Sheets
+        async function loadEmpleadosFromSheets() {
+            if (!isGoogleAuthorized || !SPREADSHEET_ID) return;
+
+            const response = await gapi.client.sheets.spreadsheets.values.get({
+                spreadsheetId: SPREADSHEET_ID,
+                range: 'Empleados!A2:C'
+            });
+
+            const rows = response.result.values || [];
+            if (rows.length > 0) {
+                db.emps = rows.map(row => ({ id: row[0], name: row[1] }));
+            }
+        }
+
+        // Guardar nómina en Sheets
+        async function saveNominaToSheets() {
+            if (!isGoogleAuthorized || !SPREADSHEET_ID) return;
+
+            const values = [['ID', 'Fecha', 'Empleado', 'Entrada', 'Salida', 'HE', 'Bonificación', 'Total']];
+            db.nomina.forEach(r => {
+                values.push([r.id, r.fecha, r.empName, r.tIn, r.tOut, r.he, 0, r.total]);
+            });
+
+            await gapi.client.sheets.spreadsheets.values.update({
+                spreadsheetId: SPREADSHEET_ID,
+                range: 'Nómina!A1',
+                valueInputOption: 'RAW',
+                resource: { values }
+            });
+        }
+
+        // Cargar nómina desde Sheets
+        async function loadNominaFromSheets() {
+            if (!isGoogleAuthorized || !SPREADSHEET_ID) return;
+
+            const response = await gapi.client.sheets.spreadsheets.values.get({
+                spreadsheetId: SPREADSHEET_ID,
+                range: 'Nómina!A2:H'
+            });
+
+            const rows = response.result.values || [];
+            if (rows.length > 0) {
+                db.nomina = rows.map(row => ({
+                    id: parseFloat(row[0]),
+                    fecha: row[1],
+                    empName: row[2],
+                    tIn: row[3],
+                    tOut: row[4],
+                    he: parseFloat(row[5]),
+                    total: parseFloat(row[7])
+                }));
+            }
+        }
+
+        // Guardar caja en Sheets
+        async function saveCajaToSheets() {
+            if (!isGoogleAuthorized || !SPREADSHEET_ID) return;
+
+            const values = [['ID', 'Fecha', 'Tipo', 'Categoría', 'Detalle', 'Monto']];
+            db.caja.forEach(r => {
+                values.push([r.id, r.fecha.slice(0, 10), r.tipo, r.cat, r.con, r.mon]);
+            });
+
+            await gapi.client.sheets.spreadsheets.values.update({
+                spreadsheetId: SPREADSHEET_ID,
+                range: 'Caja!A1',
+                valueInputOption: 'RAW',
+                resource: { values }
+            });
+        }
+
+        // Cargar caja desde Sheets
+        async function loadCajaFromSheets() {
+            if (!isGoogleAuthorized || !SPREADSHEET_ID) return;
+
+            const response = await gapi.client.sheets.spreadsheets.values.get({
+                spreadsheetId: SPREADSHEET_ID,
+                range: 'Caja!A2:F'
+            });
+
+            const rows = response.result.values || [];
+            if (rows.length > 0) {
+                db.caja = rows.map(row => ({
+                    id: parseFloat(row[0]),
+                    fecha: row[1],
+                    tipo: row[2],
+                    cat: row[3],
+                    con: row[4],
+                    mon: parseFloat(row[5])
+                }));
+            }
+        }
+
+        // Guardar config en Sheets
+        async function saveConfigToSheets() {
+            if (!isGoogleAuthorized || !SPREADSHEET_ID) return;
+
+            const values = [
+                ['Clave', 'Valor'],
+                ['caja_base', db.cajaBase]
+            ];
+
+            await gapi.client.sheets.spreadsheets.values.update({
+                spreadsheetId: SPREADSHEET_ID,
+                range: 'Config!A1',
+                valueInputOption: 'RAW',
+                resource: { values }
+            });
+        }
+
+        // Cargar config desde Sheets
+        async function loadConfigFromSheets() {
+            if (!isGoogleAuthorized || !SPREADSHEET_ID) return;
+
+            const response = await gapi.client.sheets.spreadsheets.values.get({
+                spreadsheetId: SPREADSHEET_ID,
+                range: 'Config!A2:B'
+            });
+
+            const rows = response.result.values || [];
+            rows.forEach(row => {
+                if (row[0] === 'caja_base') {
+                    db.cajaBase = parseFloat(row[1]) || 0;
+                }
+            });
+        }
+
+        // Función unificada de sincronización
+        async function syncToCloud() {
+            if (!isGoogleAuthorized) {
+                console.log('No autorizado para sincronizar');
+                return;
+            }
+
+            if (!SPREADSHEET_ID) {
+                await createSpreadsheet();
+            }
+
+            try {
+                await Promise.all([
+                    saveEmpleadosToSheets(),
+                    saveNominaToSheets(),
+                    saveCajaToSheets(),
+                    saveConfigToSheets()
+                ]);
+                console.log('Datos sincronizados con Google Sheets');
+            } catch (err) {
+                console.error('Error sincronizando:', err);
+            }
+        }
+
+        // Cargar todos los datos desde Sheets
+        async function loadFromSheets() {
+            if (!isGoogleAuthorized || !SPREADSHEET_ID) return;
+
+            try {
+                await Promise.all([
+                    loadEmpleadosFromSheets(),
+                    loadNominaFromSheets(),
+                    loadCajaFromSheets(),
+                    loadConfigFromSheets()
+                ]);
+
+                // Actualizar UI
+                renderDashNomina();
+                updateCajaUI();
+                renderEmpList();
+
+                console.log('Datos cargados desde Google Sheets');
+            } catch (err) {
+                console.error('Error cargando datos:', err);
+            }
+        }
+
+
+        function nav(id) {
+            document.querySelectorAll('[id^="view-"]').forEach(e => e.classList.add('hidden'));
+            document.getElementById(`view-${id}`).classList.remove('hidden');
+
+            // Sidebar Active State
+            document.querySelectorAll('.nav-item').forEach(e => e.classList.remove('active'));
+            const btn = document.getElementById(`nav-${id}`);
+            if (btn) btn.classList.add('active');
+
+            // Titles
+            const titles = {
+                'nomina-dash': ['Dashboard Analítico', 'Rendimiento de Nómina'],
+                'nomina-add': ['Planilla Masiva', 'Registro por Jornada'],
+                'caja-dash': ['Control de Caja', 'Gestión Financiera'],
+                'caja-stats': ['Estadísticas', 'Análisis de Gastos'],
+                'config': ['Configuración', 'Empleados'],
+                'nomina-list': ['Base de Datos', 'Histórico']
+            };
+            if (titles[id]) {
+                document.getElementById('header-title').innerText = titles[id][0];
+                document.getElementById('header-subtitle').innerText = titles[id][1];
+            }
+
+            // Init Logic
+            if (id === 'nomina-dash') renderDashNomina();
+            if (id === 'nomina-add') renderBatchGrid();
+            if (id === 'caja-dash') updateCajaUI();
+            if (id === 'caja-stats') { renderCajaStats(); renderLists(); }
+            if (id === 'config') renderEmpList();
+            if (id === 'nomina-list') renderLists();
+        }
+
+        // ================= ANALYTICS =================
+        let mainChart = null, pieChart = null, cfChart = null;
+
+        function getWeekRange() {
+            const curr = new Date();
+            const first = curr.getDate() - curr.getDay() + 1;
+            const last = first + 6;
+            const f = new Date(curr.setDate(first)).toISOString().slice(0, 10);
+            const l = new Date(curr.setDate(last)).toISOString().slice(0, 10);
+            return { start: f, end: l };
+        }
+
+        function setMode(mode) {
+            DASH_MODE = mode;
+            ['btn-year', 'btn-month', 'btn-week'].forEach(b => document.getElementById(b).className = 'filter-pill inactive');
+            document.getElementById(`btn-${mode.toLowerCase()}`).className = 'filter-pill active';
+            renderDashNomina();
+        }
+
+        function renderDashNomina() {
+            const year = '2026';
+            const month = document.getElementById('dash-month-select').value;
+            const week = getWeekRange();
+
+            let data = db.nomina.filter(r => r.fecha.startsWith(year));
+            if (DASH_MODE === 'MONTH') data = data.filter(r => r.fecha.split('-')[1] === month);
+            if (DASH_MODE === 'WEEK') data = db.nomina.filter(r => r.fecha >= week.start && r.fecha <= week.end);
+
+            // KPIs
+            let tm = 0, th = 0;
+            data.forEach(r => { tm += r.total; th += r.he; });
+            animateValue("kpi-money", tm, true);
+            animateValue("kpi-hours", th, false, 'h');
+            document.getElementById('kpi-count').innerText = data.length;
+            document.getElementById('kpi-avg').innerText = data.length ? formatMoney(tm / data.length) : '$0';
+
+            // Ranking Table
+            const ranking = {};
+            data.forEach(r => {
+                if (!ranking[r.empName]) ranking[r.empName] = { c: 0, h: 0, t: 0 };
+                ranking[r.empName].c++; ranking[r.empName].h += r.he; ranking[r.empName].t += r.total;
+            });
+            const tbR = document.getElementById('tb-ranking'); tbR.innerHTML = '';
+            Object.entries(ranking).sort((a, b) => b[1].t - a[1].t).forEach(([name, stats]) => {
+                tbR.innerHTML += `<tr class="border-b hover:bg-slate-50 transition"><td class="p-4 pl-6 font-bold text-slate-700">${name}</td><td class="p-4 text-center"><span class="bg-slate-100 px-2 py-1 rounded-full text-xs font-bold">${stats.c}</span></td><td class="p-4 text-right">${stats.h.toFixed(1)}h</td><td class="p-4 text-right pr-6 font-mono text-emerald-600 font-bold">${formatMoney(stats.t)}</td></tr>`;
+            });
+
+            // CHARTS SETUP
+            const ctx1 = document.getElementById('mainChart').getContext('2d');
+
+            // Gradient Create
+            let gradient = ctx1.createLinearGradient(0, 0, 0, 400);
+            gradient.addColorStop(0, 'rgba(22, 163, 74, 0.4)');
+            gradient.addColorStop(1, 'rgba(22, 163, 74, 0.0)');
+
+            // Prepare Data
+            let labels = [], values = [];
+            if (DASH_MODE === 'YEAR') {
+                labels = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+                values = Array(12).fill(0);
+                data.forEach(r => values[parseInt(r.fecha.split('-')[1]) - 1] += r.total);
+            } else {
+                const daysMap = {};
+                data.forEach(r => { const d = r.fecha.slice(8, 10); daysMap[d] = (daysMap[d] || 0) + r.total; });
+                labels = Object.keys(daysMap).sort();
+                values = labels.map(d => daysMap[d]);
+                if (DASH_MODE === 'WEEK') labels = labels.map(d => `Día ${d}`);
+            }
+
+            if (mainChart) mainChart.destroy();
+            mainChart = new Chart(ctx1, {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: 'Costo Nómina',
+                        data: values,
+                        borderColor: '#16a34a',
+                        backgroundColor: gradient,
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: '#fff',
+                        pointBorderColor: '#16a34a',
+                        pointBorderWidth: 2,
+                        pointRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => formatMoney(c.raw) } } },
+                    scales: { y: { grid: { borderDash: [5, 5] }, ticks: { callback: (v) => '$' + v / 1000 + 'k' } }, x: { grid: { display: false } } }
+                }
+            });
+
+            const ctx2 = document.getElementById('pieChart').getContext('2d');
+            if (pieChart) pieChart.destroy();
+            const names = Object.keys(ranking);
+            const vals = Object.values(ranking).map(x => x.t);
+            pieChart = new Chart(ctx2, {
+                type: 'doughnut',
+                data: {
+                    labels: names,
+                    datasets: [{
+                        data: vals,
+                        backgroundColor: ['#14532d', '#15803d', '#16a34a', '#4ade80', '#86efac'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '70%',
+                    plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8 } } }
+                }
+            });
+        }
+
+        // ================= PLANILLA MASIVA (UI IMPROVED) =================
+        function renderBatchGrid() {
+            const container = document.getElementById('batch-container');
+            container.innerHTML = '';
+            db.emps.forEach(emp => {
+                container.innerHTML += `
+                    <div class="bg-white p-5 rounded-2xl shadow-soft border border-slate-100 hover:border-green-300 transition group">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <h3 class="font-bold text-slate-800 text-lg leading-tight">${emp.name}</h3>
+                                <span class="text-[10px] text-slate-400 uppercase">Turno Regular</span>
+                            </div>
+                             <div class="flex bg-slate-100 rounded p-0.5">
+                                <button type="button" onclick="autoFill('${emp.id}', 'LV', this)" class="px-2 py-1 text-xs font-bold rounded bg-white shadow-sm text-green-700">L-V</button>
+                                <button type="button" onclick="autoFill('${emp.id}', 'S', this)" class="px-2 py-1 text-xs font-bold rounded text-slate-500 hover:text-green-600">Sáb</button>
+                            </div>
+                        </div>
+                        <div class="space-y-3">
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Entrada</label>
+                                    <input type="time" id="in-${emp.id}" value="07:00" class="input-modern text-center font-mono">
+                                </div>
+                                <div>
+                                    <label class="text-[10px] uppercase font-bold text-green-600 mb-1 block">Salida</label>
+                                    <input type="time" id="out-${emp.id}" value="17:00" class="input-modern text-center font-mono font-bold text-green-800 border-green-200 bg-green-50">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Bonificación ($)</label>
+                                <input type="number" id="bono-${emp.id}" placeholder="0" class="input-modern text-sm">
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+        function autoFill(id, type, btn) {
+            const out = document.getElementById(`out-${id}`);
+            out.value = type === 'LV' ? '17:00' : '12:00';
+            // Visual feedback toggle
+            const parent = btn.parentElement;
+            parent.querySelectorAll('button').forEach(b => { b.className = "px-2 py-1 text-xs font-bold rounded text-slate-500 hover:text-green-600"; });
+            btn.className = "px-2 py-1 text-xs font-bold rounded bg-white shadow-sm text-green-700";
+
+            // Animation
+            out.classList.add('ring-2', 'ring-green-400'); setTimeout(() => out.classList.remove('ring-2', 'ring-green-400'), 300);
+        }
+
+        function guardarJornadaMasiva(e) {
+            e.preventDefault();
+            const fecha = document.getElementById('batch-date').value;
+            let count = 0, totalProc = 0;
+            db.emps.forEach(emp => {
+                const tIn = document.getElementById(`in-${emp.id}`).value;
+                const tOut = document.getElementById(`out-${emp.id}`).value;
+                const bono = parseFloat(document.getElementById(`bono-${emp.id}`).value) || 0;
+
+                const [h, m] = tOut.split(':').map(Number);
+                const dec = h + m / 60;
+                const limit = dec <= 13 ? 12 : 17;
+
+                // Cálculo dinámico de valor hora según mes (Ley 2026)
+                const fechaObj = new Date(fecha + 'T00:00:00');
+                const mes = fechaObj.getMonth(); // 0=Ene, 5=Jun, 6=Jul, 11=Dic
+                const valorHora = mes < 6 ? 7959 : 8338; // Ene-Jun: $7,959 | Jul-Dic: $8,338
+
+                let he = 0;
+                if (dec > limit) {
+                    let finD = Math.min(dec, 19);
+                    if (finD > limit) he += (finD - limit) * 1.25;
+                    if (dec > 19) he += (dec - 19) * 1.75;
+                }
+                const total = Math.round((he * valorHora) + bono);
+
+                if (tIn && tOut) {
+                    db.nomina.push({ id: Date.now() + Math.random(), fecha, empName: emp.name, tIn, tOut, he: parseFloat(he.toFixed(2)), total });
+                    count++; totalProc += total;
+                }
+            });
+            saveDB();
+            Swal.fire({
+                icon: 'success',
+                title: 'Jornada Procesada',
+                html: `<div class="text-left mt-2"><b>${count}</b> empleados registrados.<br>Total Extras: <b class="text-green-600">${formatMoney(totalProc)}</b></div>`,
+                confirmButtonColor: '#16a34a'
+            });
+            db.emps.forEach(e => document.getElementById(`bono-${e.id}`).value = '');
+        }
+
+        // ================= CAJA LOGIC =================
+        function updateBase(v) { db.cajaBase = parseFloat(v) || 0; saveDB(); updateCajaUI(); }
+        function guardarMov(e, t) {
+            e.preventDefault(); const f = new FormData(e.target);
+            db.caja.push({ id: Date.now(), fecha: new Date().toISOString(), tipo: t, cat: f.get('cat'), con: f.get('con'), mon: parseFloat(f.get('mon')) });
+            saveDB(); e.target.reset(); updateCajaUI();
+            const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, timerProgressBar: true });
+            Toast.fire({ icon: 'success', title: 'Movimiento registrado' });
+        }
+        function updateCajaUI() {
+            let i = 0, g = 0; db.caja.forEach(r => r.tipo === 'INGRESO' ? i += r.mon : g += r.mon);
+            const saldo = db.cajaBase + i - g;
+            const elBig = document.getElementById('caja-saldo-big');
+            const elHead = document.getElementById('header-saldo');
+
+            // Text Update
+            elBig.innerText = formatMoney(saldo);
+            elHead.innerText = formatMoney(saldo);
+            document.getElementById('caja-base').value = db.cajaBase;
+
+            // Mini List
+            const tb = document.getElementById('tb-caja'); tb.innerHTML = '';
+            [...db.caja].reverse().slice(0, 5).forEach(r => {
+                const isIng = r.tipo === 'INGRESO';
+                tb.innerHTML += `
+                    <tr class="group hover:bg-slate-50 transition">
+                        <td class="p-3 text-xs text-slate-400">${r.fecha.slice(0, 10)}</td>
+                        <td class="p-3">
+                            <div class="flex items-center gap-2">
+                                <div class="w-2 h-2 rounded-full ${isIng ? 'bg-green-500' : 'bg-red-500'}"></div>
+                                <span class="font-bold text-slate-700 text-xs">${r.cat}</span>
+                            </div>
+                        </td>
+                        <td class="p-3 text-xs text-slate-500 truncate max-w-[100px]">${r.con || '-'}</td>
+                        <td class="p-3 text-right font-mono font-bold ${isIng ? 'text-green-600' : 'text-red-600'} text-xs">${isIng ? '+' : '-'} ${formatMoney(r.mon)}</td>
+                    </tr>`;
+            });
+        }
+        function renderCajaStats() {
+            const ctx = document.getElementById('cashFlowChart').getContext('2d');
+            const last15 = db.caja.slice(-20);
+            if (cfChart) cfChart.destroy();
+            cfChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: last15.map(r => r.fecha.slice(5, 10)),
+                    datasets: [
+                        { label: 'Ingreso', data: last15.map(r => r.tipo === 'INGRESO' ? r.mon : 0), backgroundColor: '#22c55e', borderRadius: 4 },
+                        { label: 'Gasto', data: last15.map(r => r.tipo === 'GASTO' ? r.mon : 0), backgroundColor: '#ef4444', borderRadius: 4 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, ticks: { callback: v => '$' + v / 1000 + 'k' } } },
+                    plugins: { tooltip: { callbacks: { label: (c) => formatMoney(c.raw) } } }
+                }
+            });
+
+            const cats = {};
+            db.caja.filter(r => r.tipo === 'GASTO').forEach(r => { cats[r.cat] = (cats[r.cat] || 0) + r.mon; });
+            const tbC = document.getElementById('tb-caja-cats'); tbC.innerHTML = '';
+            let maxVal = Math.max(...Object.values(cats), 1); // Avoid div by zero
+
+            Object.entries(cats).sort((a, b) => b[1] - a[1]).forEach(([c, v]) => {
+                const percent = (v / maxVal) * 100;
+                tbC.innerHTML += `
+                    <tr>
+                        <td class="p-4 w-1/3 font-bold text-slate-700 text-xs">${c}</td>
+                        <td class="p-4 w-1/3">
+                            <div class="w-full bg-slate-100 rounded-full h-2">
+                                <div class="bg-red-400 h-2 rounded-full" style="width: ${percent}%"></div>
+                            </div>
+                        </td>
+                        <td class="p-4 w-1/3 text-right font-mono text-slate-600 font-bold text-xs">${formatMoney(v)}</td>
+                    </tr>`;
+            });
+        }
+
+        // ================= GENERAL =================
+        function addEmp() {
+            const n = document.getElementById('new-emp').value; if (!n) return;
+            db.emps.push({ id: 'e' + Date.now(), name: n }); saveDB(); renderEmpList(); document.getElementById('new-emp').value = '';
+        }
+        function renderEmpList() {
+            const l = document.getElementById('emp-list'); l.innerHTML = '';
+            db.emps.forEach(e => l.innerHTML += `<div class="flex justify-between items-center bg-slate-50 p-3 rounded-lg border border-slate-200"><span class="font-bold text-slate-700">${e.name}</span><button onclick="delEmp('${e.id}')" class="text-red-400 hover:text-red-600 px-2"><i class="fas fa-trash-alt"></i></button></div>`);
+        }
+        function delEmp(id) { Swal.fire({ title: '¿Eliminar empleado?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33' }).then((r) => { if (r.isConfirmed) { db.emps = db.emps.filter(e => e.id !== id); saveDB(); renderEmpList(); } }) }
+
+        function renderLists() {
+            const tb = document.getElementById('tb-nomina');
+            const tbC = document.getElementById('tb-caja-full');
+
+            if (tb) {
+                tb.innerHTML = '';
+                [...db.nomina].reverse().forEach(r => tb.innerHTML += `<tr class="hover:bg-slate-50 transition border-b border-slate-50"><td class="p-3 pl-4 text-slate-500 font-mono text-xs">${r.fecha}</td><td class="p-3 font-bold text-slate-700">${r.empName}</td><td class="p-3 text-center text-xs bg-slate-50 rounded m-1">${r.he}h</td><td class="p-3 text-right font-mono text-emerald-600 font-bold">${formatMoney(r.total)}</td><td class="p-3 text-right pr-4"><button onclick="del('nomina',${r.id})" class="text-slate-300 hover:text-red-500 transition"><i class="fas fa-trash"></i></button></td></tr>`);
+            }
+            if (tbC) {
+                tbC.innerHTML = '';
+                [...db.caja].reverse().forEach(r => {
+                    const isIng = r.tipo === 'INGRESO';
+                    tbC.innerHTML += `<tr class="hover:bg-slate-50 transition border-b border-slate-50"><td class="p-3 pl-4 text-slate-500 font-mono text-xs">${r.fecha.slice(0, 10)}</td><td class="p-3 font-bold text-slate-700 text-xs">${r.cat}</td><td class="p-3 text-slate-500 text-xs">${r.con || '-'}</td><td class="p-3 text-right font-mono ${isIng ? 'text-emerald-600' : 'text-red-500'} font-bold">${isIng ? '+' : '-'} ${formatMoney(r.mon)}</td><td class="p-3 text-right pr-4"><button onclick="del('caja',${r.id})" class="text-slate-300 hover:text-red-500 transition"><i class="fas fa-trash"></i></button></td></tr>`
+                });
+            }
+        }
+
+        function saveDB() {
+            // Guardar en localStorage (backup local)
+            localStorage.setItem('v16_emps', JSON.stringify(db.emps));
+            localStorage.setItem('v16_nomina', JSON.stringify(db.nomina));
+            localStorage.setItem('v16_caja', JSON.stringify(db.caja));
+            localStorage.setItem('v16_caja_base', db.cajaBase);
+
+            // Sincronizar con Google Sheets si está conectado
+            if (isGoogleAuthorized && SPREADSHEET_ID) {
+                syncToCloud();
+            }
+        }
+        function del(c, id) { Swal.fire({ title: '¿Borrar registro?', text: "No podrás revertirlo", icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33' }).then((r) => { if (r.isConfirmed) { db[c] = db[c].filter(x => x.id !== id); saveDB(); if (c === 'caja') updateCajaUI(); else renderDashNomina(); renderLists(); } }) }
+
+        // Utils
+        function animateValue(id, end, isMoney, suffix = '') {
+            const obj = document.getElementById(id);
+            const start = 0; // Simple transition implies start 0 for simplicity in this version
+            obj.innerHTML = isMoney ? formatMoney(end) : end.toFixed(0) + suffix;
+        }
+
+        function descargarBackup() { const a = document.createElement('a'); a.href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db)); a.download = `VITA_V16_BACKUP.json`; document.body.appendChild(a); a.click(); a.remove(); }
+        function restaurarBackup(i) { const f = i.files[0]; if (!f) return; const r = new FileReader(); r.onload = e => { db = JSON.parse(e.target.result); saveDB(); location.reload(); }; r.readAsText(f); }
+        function exportExcel(t) {
+            let csv = t === 'nomina' ? "FECHA,EMPLEADO,HE,TOTAL\n" : "FECHA,CATEGORIA,DETALLE,TIPO,MONTO\n";
+            (t === 'nomina' ? db.nomina : db.caja).forEach(r => { csv += t === 'nomina' ? `${r.fecha},${r.empName},${r.he},${r.total}\n` : `${r.fecha},${r.cat},${r.con},${r.tipo},${r.mon}\n`; });
+            const a = document.createElement('a'); a.href = 'data:text/csv;charset=utf-8,' + encodeURI(csv); a.download = `${t}_v16.csv`; document.body.appendChild(a); a.click(); a.remove();
+        }
+    </script>
+</body>
+
+</html>
